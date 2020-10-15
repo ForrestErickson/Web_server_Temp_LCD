@@ -81,10 +81,11 @@
 
 */
 
-/* Modify for DHT22 temprature and humidity sensor
+/* Modify for DHT22 temperature and humidity sensor
  *  Forrest Lee Erickson
  *  Date: 20201012
  *   DHT22 Connections
+ *  Date 20201015 Add I2CLCD Display 
    -----------
 
     Connect the sensor breakout like this:
@@ -111,6 +112,7 @@
 
 const char* ssid     = "NETGEAR_11N";     // Netgear WAC104 SN: 4SL373BC00087
 const char* password = "Heavybox201";  // Lab wifi router
+//const char* password = "Heavybox202";  // bad pw.
 
 const int DELAY_DHT22 = 2500;         //DHT22 sampling rate is 0.5HZ.
 unsigned long lastReadDHT22 = 0;      // Variable to track reads on HDT22
@@ -136,37 +138,79 @@ const int led_gpio = 2;
 //For BME success
 bool status;
 
+#include <LiquidCrystal_I2C.h>
+//LCD Display setup parameters.
+const int numberLines = 4;
+const int numberChar = 20;
+const int addressLCD = 0x27;
+
+LiquidCrystal_I2C lcd(addressLCD, numberChar, numberLines); // If this address is not working for your I2C backpack,
+// run the address scanner sketch to determine the actual
+// address.
+
 void setup()
 {
+  //LCD splash screen.
+  lcd.init();
+  lcd.backlight();
+  lcd.setCursor(0, 0);
+  lcd.print("Web Temp Server");
+  lcd.setCursor(0, 3);
+  lcd.print("***C!AS***");
+  
+  pinMode(led_gpio, OUTPUT);      // set the LED pin mode
+  
+  //Serial splash message
   Serial.begin(115200);
+  delay(100);
+  // We start by connecting to a WiFi network
+  Serial.println("LED Temp Humidity Monitor");
+  Serial.println("Caution! Amused Scientist");
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
+  WiFi.begin(ssid, password);
+  delay(200);
+  lcd.setCursor(0, 1);
+  lcd.print("Connecting to AP    ");
+  lcd.setCursor(0, 2);
+  lcd.print("                    ");
+  lcd.setCursor(0, 2);
+  int cursorLocation = 0;
+  while (WiFi.status() != WL_CONNECTED) {    
+    delay(1000);
+    Serial.print(".");    
+    cursorLocation++;
+    if (cursorLocation > numberChar){
+      cursorLocation = 0;
+      lcd.setCursor(0, 2);
+      lcd.print("                    ");
+      lcd.setCursor(0, 2);
+    }else {
+      lcd.print(".");      
+    }
+  }
+  Serial.println("");
+  Serial.println("WiFi connected.");
+  Serial.print("IP address: ");
+  Serial.println(WiFi.localIP());
+  //Send IP address to LCD.
+  lcd.setCursor(0, 3);
+  lcd.print("IP: ");
+  lcd.setCursor(4, 3);
+  lcd.print(WiFi.localIP());
+  
 
-  status = bme.begin(0x76);   // BME280 sensors are usually set to address 0x76 or 0x77
+  server.begin();  
+  
+    status = bme.begin(0x76);   // BME280 sensors are usually set to address 0x76 or 0x77
   // If your BME280 sensor module has an SD0 pin, then:
   // SD0 unconnected configures the address to 0x77
   // SD0 to GND configures the address to 0x76
   // If there is no SD0 pin, try either address to find out which
   // one works with your sensor.
 
-  pinMode(led_gpio, OUTPUT);      // set the LED pin mode
-  delay(100);
 
-  // We start by connecting to a WiFi network
-  Serial.println();
-  Serial.println();
-  Serial.print("Connecting to ");
-  Serial.println(ssid);
-  WiFi.begin(ssid, password);
-  delay(100);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(1000);
-    Serial.print(".");
-  }
-  Serial.println("");
-  Serial.println("WiFi connected.");
-  Serial.print("IP address: ");
-  Serial.println(WiFi.localIP());
-
-  server.begin();  
 }
 
 int value = 0;
@@ -223,6 +267,15 @@ void loop() {
               if ((err = dht22.read2(&temperature, &humidity, NULL)) != SimpleDHTErrSuccess) {
                 Serial.print("Read DHT22 failed, err="); Serial.println(err);delay(2000);            
               }
+              //Update LCD Display
+              lcd.setCursor(0, 1);
+              lcd.print("Temperature: ");
+              lcd.setCursor(13, 1);
+              lcd.print(temperature);
+              lcd.setCursor(0, 2);
+              lcd.print("Humidity: ");
+              lcd.setCursor(12, 2);
+              lcd.print(humidity);
             }// time to read
             client.print("<hl>");
             client.print("<p>DHT22 Temperature:");
