@@ -95,10 +95,17 @@
      3.3V   |    Pin 1
      GPIO32 |    Pin 2
      -      |    Pin 3
-     GND    |    Pin 4
-     
+     GND    |    Pin 4     
     Connect a 10 K Ohm resistor between Pin 2 of the sensor and 3.3V on the ESP32 board.
 
+   Connections
+   -----------
+    ESP32         |    I2C backpack
+    -----------------------------
+        GND       |      GND
+        5V        |      5V
+        GPIO42    |      SDA
+        GPIO39    |      SCL
  * 
  */
 
@@ -161,7 +168,8 @@ void setup()
   pinMode(led_gpio, OUTPUT);      // set the LED pin mode
   
   //Serial splash message
-  Serial.begin(115200);
+//  Serial.begin(115200);
+  Serial.begin(19200);
   delay(100);
   // We start by connecting to a WiFi network
   Serial.println("LED Temp Humidity Monitor");
@@ -189,7 +197,7 @@ void setup()
     }else {
       lcd.print(".");      
     }
-  }
+  }//end with WiFi connected.
   Serial.println("");
   Serial.println("WiFi connected.");
   Serial.print("IP address: ");
@@ -199,7 +207,6 @@ void setup()
   lcd.print("IP: ");
   lcd.setCursor(4, 3);
   lcd.print(WiFi.localIP());
-  
 
   server.begin();  
   
@@ -209,11 +216,7 @@ void setup()
   // SD0 to GND configures the address to 0x76
   // If there is no SD0 pin, try either address to find out which
   // one works with your sensor.
-
-
-}
-
-int value = 0;
+}//end setup
 
 void loop() {
   WiFiClient client = server.available();   // listen for incoming clients
@@ -240,15 +243,20 @@ void loop() {
             client.println("<html>");
             client.println("<head>");
             client.println("<title>LED Temp Humidity Monitor</title>");
+//            client.println("<link rel=\"apple-touch-icon\" sizes=\"180x180\" href=\"/apple-touch-icon.png\">");
+//            client.println("<link rel=\"icon\" type=\"image/png\" sizes=\"32x32\" href=\"/favicon-32x32.png\">");
+//            client.println("<link rel=\"icon\" type=\"image/png\" sizes=\"16x16\" href=\"/favicon-16x16.png\">");
+//            client.println("<link rel=\"manifest\" href=\"/site.webmanifest\">");
+
             client.println("</head>");
 
             // the content of the HTTP response follows the header:
             client.print("<p>Click <a href=\"/H\">here</a> to turn the LED on pin ");
             client.print(led_gpio);
-            client.print(" on.</p>");
+            client.print(" on and display Farenheit.</p>");
             client.print("<p>Click <a href=\"/L\">here</a> to turn the LED on pin ");
             client.print(led_gpio);
-            client.print(" off.</p>");
+            client.print(" off and display Celcius.</p>");
 
             if (status) {
             client.print("<hl>");
@@ -265,7 +273,12 @@ void loop() {
             if (millis()>DELAY_DHT22 + lastReadDHT22) {            
               lastReadDHT22 = millis();
               if ((err = dht22.read2(&temperature, &humidity, NULL)) != SimpleDHTErrSuccess) {
-                Serial.print("Read DHT22 failed, err="); Serial.println(err);delay(2000);            
+                Serial.print("Read DHT22 failed, err="); Serial.println(err);delay(2000);
+                //If LED on report in F, else C
+                }
+              if (digitalRead(led_gpio)){
+                temperature =(temperature *9.0/5.0)+32.0;
+                Serial.print("Temprature after conversion= "); Serial.println(temperature);                
               }
               //Update LCD Display
               lcd.setCursor(0, 1);
@@ -280,7 +293,12 @@ void loop() {
             client.print("<hl>");
             client.print("<p>DHT22 Temperature:");
             client.print(temperature);
-            client.print(" &deg;C</p>");
+            if (digitalRead(led_gpio)){
+                temperature =(temperature *9.0/5.0)+32.0;
+                client.print(" &deg;F</p>");
+              } else {
+                client.print(" &deg;C</p>");
+              }             
             client.print("<p>DHT22 Humidity:");
             client.print(humidity);
             client.println(" %</p>");
@@ -311,5 +329,5 @@ void loop() {
     // close the connection:
     client.stop();
     Serial.println("Client Disconnected.");
-  }
-}
+  }// web client connected
+}//loop
