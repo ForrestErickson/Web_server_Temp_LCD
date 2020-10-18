@@ -237,7 +237,7 @@ void loop() {
             // and a content-type so the client knows what's coming, then a blank line:
             client.println("HTTP/1.1 200 OK");
             client.println("Content-type:text/html");
-            client.println("Refresh: 5");
+            client.println("Refresh: 5; URL = '/'"); //Redirect with out H or L
             client.println();
             client.println("<!DOCTYPE HTML>");
             client.println("<html>");
@@ -249,8 +249,9 @@ void loop() {
 //            client.println("<link rel=\"manifest\" href=\"/site.webmanifest\">");
 
             client.println("</head>");
-
-            // the content of the HTTP response follows the header:
+            // the content of the HTTP response follows the header in the body:
+            client.println("<body>");
+            client.println("<h1>LED Temp Humidity Monitor</H1>");
             client.print("<p>Click <a href=\"/H\">here</a> to turn the LED on pin ");
             client.print(led_gpio);
             client.print(" on and display Farenheit.</p>");
@@ -303,7 +304,8 @@ void loop() {
             client.print(humidity);
             client.println(" %</p>");
             client.print("<footer><hr><h5><p>&copy Forrest Erickson as Amused Scientist 2020.</h5></footer>");
-            
+
+            client.println("</body>");            
             client.println("</html>");
 
             // The HTTP response ends with another blank line:
