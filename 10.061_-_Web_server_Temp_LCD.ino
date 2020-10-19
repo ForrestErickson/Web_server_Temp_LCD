@@ -155,6 +155,28 @@ LiquidCrystal_I2C lcd(addressLCD, numberChar, numberLines); // If this address i
 // run the address scanner sketch to determine the actual
 // address.
 
+// Button with interupt service
+const byte interruptPin = 25;
+volatile int interruptCounter = 0;
+int numberOfInterrupts = 0;
+bool led_state = false;  // Keep track of the state of the LED
+
+// Debouncing parameters
+long debouncing_time = 1000; //Debouncing Time in Milliseconds
+volatile unsigned long last_micros;
+ 
+portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
+ 
+void IRAM_ATTR handleInterrupt() {
+  portENTER_CRITICAL_ISR(&mux);
+   if((long)(micros() - last_micros) >= debouncing_time * 1000) {
+    interruptCounter++;
+  }
+  last_micros = micros();
+  portEXIT_CRITICAL_ISR(&mux);
+}// end IRAM_ATTR handleInterrupt
+
+
 void setup()
 {
   //LCD splash screen.
@@ -166,12 +188,15 @@ void setup()
   lcd.print("***C!AS***");
   
   pinMode(led_gpio, OUTPUT);      // set the LED pin mode
+
+  pinMode(interruptPin, INPUT_PULLUP);  // Button. Using an extarnal pull up instead of internal
+  attachInterrupt(digitalPinToInterrupt(interruptPin), handleInterrupt, FALLING);
   
   //Serial splash message
 //  Serial.begin(115200);
   Serial.begin(19200);
   delay(100);
-  // We start by connecting to a WiFi network
+  // We connect to a WiFi network
   Serial.println("LED Temp Humidity Monitor");
   Serial.println("Caution! Amused Scientist");
   Serial.println();
@@ -219,6 +244,22 @@ void setup()
 }//end setup
 
 void loop() {
+// Button
+  if(interruptCounter>0){
+ 
+      portENTER_CRITICAL(&mux);
+      interruptCounter--;
+      portEXIT_CRITICAL(&mux);
+
+      led_state = !led_state;
+
+      digitalWrite(led_gpio, led_state);   // turn the LED on (HIGH is the voltage level)
+      
+      numberOfInterrupts++;
+      Serial.print("An interrupt has occurred. Total:");
+      Serial.println(numberOfInterrupts);
+  }
+  
   WiFiClient client = server.available();   // listen for incoming clients
 
   if (client) {                             // if you get a client,
