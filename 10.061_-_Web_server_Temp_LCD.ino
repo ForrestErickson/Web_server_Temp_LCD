@@ -40,7 +40,11 @@
     GPIO22 |    SCL
     GPIO21 |    SDA
 
-
+    ESP32   |    Button
+   -------------------
+    GPIO25 |    pin 1
+    GND    |    pin 2
+  
     Other information
     -----------------
 
@@ -86,6 +90,7 @@
  *  Date: 20201012
  *   DHT22 Connections
  *  Date 20201015 Add I2CLCD Display 
+ *  Date 20201019 Add button to change temprature from C to F
    -----------
 
     Connect the sensor breakout like this:
